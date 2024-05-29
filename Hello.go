@@ -11,5 +11,6 @@ func HelloPerson(name string) {
 }
 
 func HelloPerson2(name string){
-	fmt.Sprintf("Hello %s",name)
+	 fmt.Printf("Hello %s",name)
+	 fmt.Println("Hello WORLD")
 }
