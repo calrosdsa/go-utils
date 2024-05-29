@@ -9,3 +9,7 @@ type Hello struct {
 func HelloPerson(name string) {
 	fmt.Println(name)
 }
+
+func HelloPerson2(name string){
+	fmt.Sprintf("Hello %s",name)
+}
