@@ -1,0 +1,128 @@
+package logger
+
+
+import (
+	"os"
+    r "github.com/calrosdsa/go-utils"
+
+
+	"context"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
+	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/sdk/log"
+
+	l "go.opentelemetry.io/otel/log"
+
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+
+	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/bridges/otellogrus"
+)
+
+type loggerService struct {
+	logger         *logrus.Logger
+	serviceName    string
+	serviceVersion string
+}
+
+func New(serviceName string, serviceVercion string) r.Logger {
+	ctx := context.Background()
+	// Create resource.
+	res, err := newResource(serviceName, serviceVercion)
+	if err != nil {
+		panic(err)
+	}
+
+	logger := &logrus.Logger{
+		Out:       os.Stderr,
+		Formatter: new(logrus.TextFormatter),
+		Hooks:     make(logrus.LevelHooks),
+		Level:     logrus.Level(l.SeverityFatal4),
+	}
+
+	// Create a logger provider.
+	// You can pass this instance directly when creating bridges.
+	loggerProvider, err := newLoggerProvider(ctx, res)
+	if err != nil {
+		panic(err)
+	}
+	// Handle shutdown properly so nothing leaks.
+	// defer func() {
+	// 	if err := loggerProvider.Shutdown(ctx); err != nil {
+	// 		fmt.Println(err)
+	// 	}
+	// }()
+	// Register as global logger provider so that it can be accessed global.LoggerProvider.
+	// Most log bridges use the global logger provider as default.
+	// If the global logger provider is not set then a no-op implementation
+	// is used, which fails to generate data.
+	global.SetLoggerProvider(loggerProvider)
+
+	// Create an *otellogrus.Hook and use it in your application.
+	hook := otellogrus.NewHook(
+		otellogrus.WithLoggerProvider(loggerProvider),
+		otellogrus.WithLevels(r.AllawordLevels),
+	)
+	// Set the newly created hook as a global logrus hook
+	logger.AddHook(hook)
+
+	return &loggerService{
+		logger:      logger,
+		serviceName: serviceName,
+	}
+}
+
+func (s *loggerService) LogError(err error, opts ...r.OptionLog) {
+	s.Log(err.Error(), int(l.SeverityError), opts...)
+}
+
+func (s *loggerService) LogInfo(m string, opts ...r.OptionLog) {
+	s.Log(m, int(l.SeverityInfo), opts...)
+}
+
+func (s *loggerService) LogWarn(m string, opts ...r.OptionLog) {
+	s.Log(m, int(l.SeverityWarn), opts...)
+}
+
+func (s *loggerService) Log(m string, severity int, opts ...r.OptionLog) {
+	options := r.OptionsLog.Apply(opts...)
+	fields := logrus.Fields{}
+	if options.GetFileName() != "" {
+		fields["file"] = options.GetFileName()
+	}
+	if options.GetMethod() != "" {
+		fields["method"] = options.GetMethod()
+	}
+	fields["operation"] = options.GetOperation()
+	entry := s.logger.WithFields(fields)
+	entry.Log(logrus.Level(severity), m)
+}
+
+func newResource(serviceName, serviceVersion string) (*resource.Resource, error) {
+	return resource.Merge(resource.Default(),
+		resource.NewWithAttributes(semconv.SchemaURL,
+			semconv.ServiceName(serviceName),
+			semconv.ServiceVersion(serviceVersion),
+		))
+}
+
+func newLoggerProvider(ctx context.Context, res *resource.Resource) (*log.LoggerProvider, error) {
+	// exporter,err := stdoutlog.New()
+
+	exporter, err := otlploghttp.New(ctx,
+		otlploghttp.WithEndpoint("localhost:8000"),
+		otlploghttp.WithInsecure(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	processor := log.NewBatchProcessor(exporter)
+	provider := log.NewLoggerProvider(
+		log.WithResource(res),
+		log.WithProcessor(processor),
+	)
+	return provider, nil
+}
+
