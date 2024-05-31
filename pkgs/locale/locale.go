@@ -13,6 +13,7 @@ import (
 type locale struct {
 	bundle *i18n.Bundle
 	defaultLanguage string
+	locales []string
 }
 
 
@@ -27,11 +28,17 @@ func New() _r.Locale {
 	return &locale{
 		bundle: bundle,
 		defaultLanguage: locales[0],
+		locales: locales,
 	}
 }
 
-func (l *locale) GetLanguage(lang string) {
-
+func (l *locale) GetLang(lang string) string{
+	for _,locale := range l.locales {
+		if locale == lang {
+			return lang 
+		}
+	}
+	return l.defaultLanguage
 }
 
 func (l *locale) MustLocalize(opts ..._r.OptionLocale) (res string) {
