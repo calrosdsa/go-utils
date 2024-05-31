@@ -1,10 +1,10 @@
 package logger
 
-
 import (
 	"os"
-    r "github.com/calrosdsa/go-utils"
 
+	r "github.com/calrosdsa/go-utils"
+	"github.com/spf13/viper"
 
 	"context"
 
@@ -15,7 +15,7 @@ import (
 	l "go.opentelemetry.io/otel/log"
 
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/bridges/otellogrus"
@@ -96,6 +96,9 @@ func (s *loggerService) Log(m string, severity int, opts ...r.OptionLog) {
 	if options.GetMethod() != "" {
 		fields["method"] = options.GetMethod()
 	}
+	if options.GetLineNumber() == 0 {
+		fields["lineNumber"]  = options.GetLineNumber()
+	}
 	fields["operation"] = options.GetOperation()
 	entry := s.logger.WithFields(fields)
 	entry.Log(logrus.Level(severity), m)
@@ -110,8 +113,10 @@ func newResource(serviceName, serviceVersion string) (*resource.Resource, error)
 }
 
 func newLoggerProvider(ctx context.Context, res *resource.Resource) (*log.LoggerProvider, error) {
-	// exporter,err := stdoutlog.New()
-
+	loggerEndpoint := viper.GetString("logger.endpoint")
+	if loggerEndpoint == "" {
+		loggerEndpoint = "localhost:8000"
+	}
 	exporter, err := otlploghttp.New(ctx,
 		otlploghttp.WithEndpoint("localhost:8000"),
 		otlploghttp.WithInsecure(),

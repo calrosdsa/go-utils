@@ -8,6 +8,7 @@ type options struct{
 	file string
 	method string
 	operation string
+	lineNumber int
 }
 
 type OptionLog func(o *options)
@@ -31,6 +32,11 @@ func (_ *options) WithOperation(file string) OptionLog {
 		o.file = file
 	}
 }
+func (_ *options) WithLineNumber(lineNumber int) OptionLog {
+	return func(o *options) {
+		o.lineNumber = lineNumber
+	}
+}
 
 func (o *options) GetOperation() string {
 	return o.operation
@@ -42,6 +48,10 @@ func (o *options) GetFileName() string {
 
 func (o *options) GetMethod() string {
 	return o.method
+}
+
+func (o *options) GetLineNumber() int {
+	return o.lineNumber
 }
 
 func(_ *options) Apply(opts ...OptionLog) options {
