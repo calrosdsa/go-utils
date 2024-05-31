@@ -8,5 +8,5 @@ type option func(*Foo) interface{}
 
 
 type Locale interface {
-	MustLocalize(id string,lang string) (res string)
+	MustLocalize(opts ...OptionLocale) (res string)
 }

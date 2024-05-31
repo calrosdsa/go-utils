@@ -19,7 +19,10 @@ func NewService(locale _r.Locale) _r.ErrorService{
 }
 
 func(s *errorService) GetErrorMessage(key string,statusCode int,lang string) (err error){
-	message := s.locale.MustLocalize(key,lang)
+	message := s.locale.MustLocalize(
+		_r.OptionsLocale.WithID(key),
+		_r.OptionsLocale.WithLang(lang),
+	)
 	data := _r.ErrorData{
 		Message: message,
 		StatusCode: statusCode,
