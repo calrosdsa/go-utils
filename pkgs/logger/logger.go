@@ -62,6 +62,7 @@ func New(serviceName string, serviceVercion string) r.Logger {
 
 	// Create an *otellogrus.Hook and use it in your application.
 	hook := otellogrus.NewHook(
+		"logger",
 		otellogrus.WithLoggerProvider(loggerProvider),
 		otellogrus.WithLevels(r.AllawordLevels),
 	)
