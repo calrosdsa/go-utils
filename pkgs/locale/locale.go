@@ -1,8 +1,10 @@
 package locale
 
 import (
-	_r "github.com/calrosdsa/go-utils"
 	"fmt"
+	"net/http"
+
+	_r "github.com/calrosdsa/go-utils"
 
 	"github.com/BurntSushi/toml"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -32,7 +34,8 @@ func New() _r.Locale {
 	}
 }
 
-func (l *locale) GetLang(lang string) string{
+func (l *locale) GetLang(r *http.Request) string{
+	lang := r.Header["Accept-Language"][0]
 	for _,locale := range l.locales {
 		if locale == lang {
 			return lang 
